@@ -5,8 +5,8 @@ from django.core.paginator import Paginator
 from django.db.models import Q
 from django.shortcuts import render,redirect,get_object_or_404
 from .models import Pendencia,Loja,Importacao
-from .forms import ImportForm,AcompanhamentoForm
-from .services import importar,acompanhar,pode_importar
+from .forms import ImportForm,AcompanhamentoForm,AtualizacaoMassaForm
+from .services import importar,acompanhar,pode_importar,acompanhar_em_massa
 
 @login_required
 def home(request):
@@ -50,3 +50,25 @@ def upload(request):
         except ValidationError as exc: form.add_error(None,exc)
         else: messages.success(request,'Importação concluída. Produto ausente não confirma regularização.')
     return render(request,'upload.html',{'form':form,'result':result})
+
+
+@permission_required('eldi.change_pendencia', raise_exception=True)
+def bulk_update(request):
+    form = AtualizacaoMassaForm(request.POST or None)
+    confirmar = False
+    selected = []
+    if request.method == 'POST' and form.is_valid():
+        selected = list(form.cleaned_data['pendencias'])
+        if request.POST.get('etapa') == 'confirmar':
+            try:
+                total = acompanhar_em_massa(
+                    [p.pk for p in selected], request.user,
+                    form.cleaned_data['situacao'], form.cleaned_data['responsavel'], form.cleaned_data['observacao'])
+            except ValidationError as exc:
+                form.add_error(None, exc)
+            else:
+                messages.success(request, f'{total} pendência(s) atualizada(s). Histórico individual preservado.')
+                return redirect('pending')
+        elif request.POST.get('etapa') != 'editar':
+            confirmar = True
+    return render(request, 'bulk.html', {'form':form,'confirmar':confirmar,'selected':selected})

@@ -129,3 +129,23 @@ def acompanhar(pk,usuario,situacao,responsavel,observacao):
     pending.save()
     HistoricoPendencia.objects.create(pendencia=pending,usuario=usuario,anterior=old,nova=situacao,descricao=detail[:700])
     return pending
+
+
+@transaction.atomic
+def acompanhar_em_massa(ids, usuario, situacao, responsavel, observacao):
+    """Atualiza o lote inteiro ou desfaz todas as alterações."""
+    if not usuario.is_authenticated or not usuario.is_active or not (usuario.is_superuser or usuario.has_perm('eldi.change_pendencia')):
+        raise PermissionDenied
+    ids = sorted(set(ids))
+    if not ids or len(ids) > 50:
+        raise ValidationError('Selecione de 1 a 50 pendências.')
+    shops = sorted(set(Pendencia.objects.filter(pk__in=ids).values_list('loja_id', flat=True)))
+    list(Loja.objects.select_for_update().filter(pk__in=shops).order_by('pk'))
+    records = list(Pendencia.objects.select_for_update().filter(pk__in=ids).order_by('pk'))
+    if len(records) != len(ids):
+        raise ValidationError('Uma pendência selecionada não existe mais. Revise a seleção.')
+    if any(p.situacao == Pendencia.Situacao.CONFIRMADA for p in records):
+        raise ValidationError('O lote contém regularização confirmada. Nenhuma alteração foi salva.')
+    for p in records:
+        acompanhar(p.pk, usuario, situacao, responsavel, observacao)
+    return len(records)

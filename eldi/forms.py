@@ -16,3 +16,19 @@ class AcompanhamentoForm(forms.Form):
     responsavel = forms.ModelChoiceField(queryset=get_user_model().objects.filter(is_active=True),required=False,label='Responsável')
     situacao = forms.ChoiceField(label='Situação',choices=[c for c in Pendencia.Situacao.choices if c[0]!='confirmada'])
     observacao = forms.CharField(label='Observação',required=False,max_length=500,widget=forms.Textarea(attrs={'rows':3}))
+
+
+class AtualizacaoMassaForm(AcompanhamentoForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['pendencias'].label_from_instance = lambda p: f'{p.produto.codigo} — {p.produto.descricao} | {p.loja.codigo} | {p.get_situacao_display()}'
+    pendencias = forms.ModelMultipleChoiceField(
+        label='Pendências selecionadas',
+        queryset=Pendencia.objects.exclude(situacao='confirmada').select_related('produto','loja').order_by('produto__codigo'),
+        widget=forms.CheckboxSelectMultiple,
+        help_text='Selecione até 50 registros. Todos receberão os valores abaixo.')
+    def clean_pendencias(self):
+        selected = self.cleaned_data['pendencias']
+        if selected.count() > 50:
+            raise forms.ValidationError('Selecione no máximo 50 pendências.')
+        return selected
