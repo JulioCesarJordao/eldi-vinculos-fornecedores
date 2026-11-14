@@ -11,6 +11,11 @@ from .services import parse_csv,importar,acompanhar
 HEADER=b'produto_codigo,produto_descricao,fornecedor_codigo,fornecedor_nome\n'
 
 class CsvUnitTests(SimpleTestCase):
+    def test_conflicting_supplier_presence_in_both_orders(self):
+        rows = [b'P1,Arroz,,\n', b'P1,Arroz,F1,Fornecedor\n']
+        for ordered in (rows, list(reversed(rows))):
+            with self.subTest(ordered=ordered), self.assertRaises(ValidationError):
+                parse_csv(HEADER + b''.join(ordered))
     def test_utf8_bom_and_leading_zero(self):
         self.assertIn('001',parse_csv(b'\xef\xbb\xbf'+HEADER+b'001,Arroz,,\n'))
     def test_multiple_suppliers(self):
@@ -22,6 +27,27 @@ class CsvUnitTests(SimpleTestCase):
             with self.subTest(raw=raw),self.assertRaises(ValidationError): parse_csv(raw)
 
 class WorkflowTests(TestCase):
+    def test_repeated_confirmation_preserves_original_date(self):
+        self.run_import('P1,Arroz,,\n')
+        self.run_import('P1,Arroz,F1,Fornecedor A\n', 1)
+        pending = Pendencia.objects.get()
+        original_date = pending.confirmada_em
+        latest = self.run_import('P1,Arroz,F2,Fornecedor B\n', 2)
+        pending.refresh_from_db()
+        self.assertEqual(pending.confirmada_em, original_date)
+        self.assertEqual(pending.ultima_importacao_id, latest.pk)
+        self.assertEqual(pending.situacao, 'confirmada')
+
+    def test_conflicting_file_does_not_confirm_pending(self):
+        self.run_import('P1,Arroz,,\n')
+        with self.assertRaises(ValidationError):
+            self.run_import('P1,Arroz,,\nP1,Arroz,F1,Fornecedor\n', 1)
+        pending = Pendencia.objects.get()
+        self.assertEqual(pending.situacao, 'pendente')
+        self.assertIsNone(pending.confirmada_em)
+        self.assertEqual(HistoricoPendencia.objects.count(), 1)
+        self.assertEqual(Importacao.objects.filter(situacao='rejeitada').count(), 1)
+
     def setUp(self):
         User=get_user_model()
         self.manager=User.objects.create_superuser('gestor',password='Teste-local-com-frase-segura')

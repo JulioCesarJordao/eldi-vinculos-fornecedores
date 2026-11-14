@@ -39,9 +39,13 @@ def parse_csv(raw):
             if (code,supplier) in seen:
                 raise ValidationError(f'Linha {number}: vínculo duplicado.')
             seen.add((code,supplier))
-            item = result.setdefault(code, {'descricao':desc,'fornecedores':{}})
+            item = result.setdefault(code, {'descricao':desc,'fornecedores':{},'sem_fornecedor':False})
             if item['descricao'] != desc:
                 raise ValidationError(f'Linha {number}: descrições divergentes para o produto.')
+            if (supplier and item['sem_fornecedor']) or (not supplier and item['fornecedores']):
+                raise ValidationError(f'Linha {number}: produto declarado com e sem fornecedor no mesmo arquivo.')
+            if not supplier:
+                item['sem_fornecedor'] = True
             if supplier:
                 if supplier in names and names[supplier]!=name:
                     raise ValidationError(f'Linha {number}: nomes divergentes para fornecedor.')
@@ -94,7 +98,9 @@ def _aplicar(data,loja,referencia,usuario,filename,digest):
             pending = Pendencia(loja=loja,produto=product,ultima_importacao=imp)
         if record['fornecedores']:
             pending.situacao = Pendencia.Situacao.CONFIRMADA
-            pending.confirmada_em = timezone.now()
+            # Uma nova conferência mantém a data da confirmação original.
+            if old != Pendencia.Situacao.CONFIRMADA:
+                pending.confirmada_em = timezone.now()
         elif pending.situacao == Pendencia.Situacao.CONFIRMADA:
             pending.situacao = Pendencia.Situacao.PENDENTE
             pending.confirmada_em = None
