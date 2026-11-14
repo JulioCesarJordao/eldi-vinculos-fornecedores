@@ -1,0 +1,5 @@
+[run]
+source = eldi
+omit = */tests.py,*/migrations/*
+[report]
+show_missing = True

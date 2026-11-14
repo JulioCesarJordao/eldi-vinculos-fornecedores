@@ -8,7 +8,7 @@ Após uma migração para o Consinco, permaneceram produtos sem vínculo com for
 
 ## Estado atual
 
-Este primeiro registro contém o **protótipo navegável** desenvolvido na Experiência Prática II e a documentação inicial. **A implementação do backend Django/PostgreSQL ainda não está incluída.** O histórico começa com a importação desses arquivos existentes, sem simular commits retroativos.
+O repositório contém o protótipo da Experiência Prática II e uma primeira implementação Django: autenticação, permissões, modelos, migração inicial, importação transacional, consulta e acompanhamento com histórico. O histórico começa pela importação do protótipo existente, sem commits retroativos. A execução local foi validada com Python 3.12 e SQLite; PostgreSQL está configurável, mas ainda não foi testado neste ambiente. Não é uma versão pronta para produção.
 
 ## Executar o protótipo
 
@@ -64,4 +64,5 @@ DESENVOLVIMENTO.md             Fluxo de contribuição e evidências
 Contribuição local ao ODS 8, meta 8.2, pelo apoio à organização e produtividade do trabalho. Benefícios e metas ainda precisam de validação; não se pressupõe ganho de renda ou de abastecimento.
 
 Projeto acadêmico independente; não é um produto oficial da Consinco nem uma divulgação de dados internos da Rede Eldi.
+
 

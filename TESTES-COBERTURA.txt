@@ -1,0 +1,13 @@
+Name                        Stmts   Miss  Cover   Missing
+---------------------------------------------------------
+eldi\__init__.py                0      0   100%
+eldi\apps.py                    4      0   100%
+eldi\forms.py                  16      1    94%   12
+eldi\models.py                 61      0   100%
+eldi\services.py              117      7    94%   17, 29, 44, 54, 60, 76, 109
+eldi\templates_content.py       1      0   100%
+eldi\views.py                  47      3    94%   13, 36, 50
+---------------------------------------------------------
+TOTAL                         246     11    96%
+
+Execucao local em 14/11/2026: 17 testes aprovados com Python 3.12 e SQLite. django check sem problemas; makemigrations --check sem alteracoes. PostgreSQL configuravel, mas nao testado. Sem CI executada nesta entrega.
