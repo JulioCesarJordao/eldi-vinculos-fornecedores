@@ -39,9 +39,13 @@ def parse_csv(raw):
             if (code,supplier) in seen:
                 raise ValidationError(f'Linha {number}: vínculo duplicado.')
             seen.add((code,supplier))
-            item = result.setdefault(code, {'descricao':desc,'fornecedores':{}})
+            item = result.setdefault(code, {'descricao':desc,'fornecedores':{},'sem_fornecedor':False})
             if item['descricao'] != desc:
                 raise ValidationError(f'Linha {number}: descrições divergentes para o produto.')
+            if (supplier and item['sem_fornecedor']) or (not supplier and item['fornecedores']):
+                raise ValidationError(f'Linha {number}: produto declarado com e sem fornecedor no mesmo arquivo.')
+            if not supplier:
+                item['sem_fornecedor'] = True
             if supplier:
                 if supplier in names and names[supplier]!=name:
                     raise ValidationError(f'Linha {number}: nomes divergentes para fornecedor.')
@@ -94,7 +98,9 @@ def _aplicar(data,loja,referencia,usuario,filename,digest):
             pending = Pendencia(loja=loja,produto=product,ultima_importacao=imp)
         if record['fornecedores']:
             pending.situacao = Pendencia.Situacao.CONFIRMADA
-            pending.confirmada_em = timezone.now()
+            # Uma nova conferência mantém a data da confirmação original.
+            if old != Pendencia.Situacao.CONFIRMADA:
+                pending.confirmada_em = timezone.now()
         elif pending.situacao == Pendencia.Situacao.CONFIRMADA:
             pending.situacao = Pendencia.Situacao.PENDENTE
             pending.confirmada_em = None
@@ -123,3 +129,23 @@ def acompanhar(pk,usuario,situacao,responsavel,observacao):
     pending.save()
     HistoricoPendencia.objects.create(pendencia=pending,usuario=usuario,anterior=old,nova=situacao,descricao=detail[:700])
     return pending
+
+
+@transaction.atomic
+def acompanhar_em_massa(ids, usuario, situacao, responsavel, observacao):
+    """Atualiza o lote inteiro ou desfaz todas as alterações."""
+    if not usuario.is_authenticated or not usuario.is_active or not (usuario.is_superuser or usuario.has_perm('eldi.change_pendencia')):
+        raise PermissionDenied
+    ids = sorted(set(ids))
+    if not ids or len(ids) > 50:
+        raise ValidationError('Selecione de 1 a 50 pendências.')
+    shops = sorted(set(Pendencia.objects.filter(pk__in=ids).values_list('loja_id', flat=True)))
+    list(Loja.objects.select_for_update().filter(pk__in=shops).order_by('pk'))
+    records = list(Pendencia.objects.select_for_update().filter(pk__in=ids).order_by('pk'))
+    if len(records) != len(ids):
+        raise ValidationError('Uma pendência selecionada não existe mais. Revise a seleção.')
+    if any(p.situacao == Pendencia.Situacao.CONFIRMADA for p in records):
+        raise ValidationError('O lote contém regularização confirmada. Nenhuma alteração foi salva.')
+    for p in records:
+        acompanhar(p.pk, usuario, situacao, responsavel, observacao)
+    return len(records)

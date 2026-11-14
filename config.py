@@ -12,12 +12,21 @@ if not SECRET_KEY:
         raise ImproperlyConfigured('Defina ELDI_SECRET_KEY; para desenvolvimento use ELDI_DEBUG=1.')
     SECRET_KEY = 'local-test-only-not-for-deployment'
 ALLOWED_HOSTS = os.getenv('ELDI_HOSTS', 'localhost,127.0.0.1,testserver').split(',')
+if os.getenv('RENDER_EXTERNAL_HOSTNAME'):
+    ALLOWED_HOSTS.append(os.environ['RENDER_EXTERNAL_HOSTNAME'])
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 INSTALLED_APPS = ['django.contrib.auth', 'django.contrib.contenttypes', 'django.contrib.sessions', 'django.contrib.messages', 'django.contrib.staticfiles', 'eldi']
 MIDDLEWARE = ['django.middleware.security.SecurityMiddleware', 'django.contrib.sessions.middleware.SessionMiddleware', 'django.middleware.common.CommonMiddleware', 'django.middleware.csrf.CsrfViewMiddleware', 'django.contrib.auth.middleware.AuthenticationMiddleware', 'django.contrib.messages.middleware.MessageMiddleware']
 ROOT_URLCONF = 'routes'
 WSGI_APPLICATION = 'wsgi.application'
 TEMPLATES = [{'BACKEND':'django.template.backends.django.DjangoTemplates','DIRS':[BASE_DIR / 'templates'],'APP_DIRS':True,'OPTIONS':{'context_processors':['django.template.context_processors.request','django.contrib.auth.context_processors.auth','django.contrib.messages.context_processors.messages']}}]
-if os.getenv('PGDATABASE'):
+if os.getenv('DATABASE_URL'):
+    from urllib.parse import urlparse, unquote
+    db = urlparse(os.environ['DATABASE_URL'])
+    if db.scheme not in ('postgres', 'postgresql'):
+        raise ImproperlyConfigured('DATABASE_URL deve usar PostgreSQL.')
+    DATABASES = {'default': {'ENGINE':'django.db.backends.postgresql', 'NAME':unquote(db.path.lstrip('/')), 'USER':unquote(db.username or ''), 'PASSWORD':unquote(db.password or ''), 'HOST':db.hostname, 'PORT':db.port or 5432}}
+elif os.getenv('PGDATABASE'):
     DATABASES = {'default': {'ENGINE':'django.db.backends.postgresql','NAME':os.environ['PGDATABASE'],'USER':os.getenv('PGUSER','eldi'),'PASSWORD':os.getenv('PGPASSWORD',''),'HOST':os.getenv('PGHOST','127.0.0.1'),'PORT':os.getenv('PGPORT','5432')}}
 elif DEBUG or TESTING:
     DATABASES = {'default':{'ENGINE':'django.db.backends.sqlite3','NAME':BASE_DIR / 'local.sqlite3'}}

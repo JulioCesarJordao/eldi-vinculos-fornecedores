@@ -1,0 +1,58 @@
+name: CI Eldi
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build-test:
+    name: Build e testes PostgreSQL
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: eldi_ci
+          POSTGRES_USER: eldi_ci
+          POSTGRES_PASSWORD: ci-only-disposable
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      ELDI_TESTING: '1'
+      PGDATABASE: eldi_ci
+      PGUSER: eldi_ci
+      PGPASSWORD: ci-only-disposable
+      PGHOST: 127.0.0.1
+      PGPORT: '5432'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Instalar dependencias
+        run: python -m pip install -r requirements.txt
+      - name: Build e verificacoes
+        run: |
+          python -m compileall -q config.py routes.py wsgi.py eldi
+          python manage.py check
+          python manage.py makemigrations --check --dry-run
+          python manage.py collectstatic --noinput
+      - name: Testes unitarios e de integracao
+        run: |
+          python -m coverage run manage.py test --verbosity 2
+          python -m coverage report --fail-under=90
+          python -m coverage xml
+      - name: Publicar relatorio de cobertura
+        uses: actions/upload-artifact@v4
+        with:
+          name: cobertura-eldi
+          path: coverage.xml
