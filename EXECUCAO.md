@@ -50,11 +50,11 @@ Com PostgreSQL configurado, os testes usam banco de teste separado; a conta de t
 
 ## Limitações conhecidas
 
-- 17 testes aprovados em SQLite; migrações aplicadas em base local descartável. PostgreSQL não validado: inicialização local foi impedida pelo ambiente Windows.
+- 24 testes aprovados em SQLite; migrações aplicadas em base local descartável. O pipeline usa PostgreSQL 16; consulte a execução do commit atual. Testes de concorrência real continuam pendentes.
 - Cobertura de linhas local: 96%, excluindo testes e migrações; não equivale a cobertura de cenários ou prova de segurança.
 - Sem limitação de tentativas de login e fluxo de convite/reset de senha nesta primeira entrega. RNF01 ainda não está integralmente atendido.
-- Sem CI configurada e sem revisão por PR nesta entrega; próximas etapas exigem evidências reais.
+- CI configurada no GitHub Actions, com build, testes PostgreSQL e cobertura mínima de 90%; PR #1 registra a revisão técnica.
 - Sem medição de desempenho do RNF03 nem auditoria completa de acessibilidade.
-- Sem validação real com compradores ainda registrada.
+- Duas rodadas com compradora realizadas em 14/11/2026, conforme relato do estudante, motivaram a atualização em massa. A edição em tabela ficou como sugestão futura.
 - Importações são síncronas e serializadas por loja no PostgreSQL; testes de concorrência e volume ainda necessários. SQLite não fornece a mesma garantia de bloqueio.
 - Telas Django funcionais usam apresentação simplificada, diferente do protótipo visual. Resultado da importação encaminha para a lista, sem painel gerencial.

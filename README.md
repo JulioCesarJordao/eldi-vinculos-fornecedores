@@ -66,3 +66,14 @@ Contribuição local ao ODS 8, meta 8.2, pelo apoio à organização e produtivi
 Projeto acadêmico independente; não é um produto oficial da Consinco nem uma divulgação de dados internos da Rede Eldi.
 
 
+
+
+## Atualização após validação — novembro de 2026
+
+A aplicação Django inclui atualização em massa: selecione até 50 pendências, informe responsável, situação e observação, revise e confirme. O histórico é individual e a transação desfaz o lote em caso de falha. Regularizações confirmadas continuam dependendo da importação, sem edição manual.
+
+O fluxo foi implementado após sugestão de uma compradora participante da validação, conforme relato do estudante. A proposta posterior de campos editáveis em cada linha permanece como evolução futura, não implementada nesta versão.
+
+Validação local: 24 testes em SQLite. A integração contínua em `.github/workflows/ci.yml` executa build/verificações, testes com PostgreSQL 16 e cobertura mínima de 90%. Consulte o resultado da execução correspondente ao commit atual; execuções anteriores não validam alterações posteriores.
+
+A demonstração usa dados fictícios. Não há senha padrão no repositório. O desenvolvimento local não representa implantação de produção.
